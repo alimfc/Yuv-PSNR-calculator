@@ -1,0 +1,5 @@
+﻿  YUV_PSNR_cal.cpp
+c:\users\alimc\desktop\mis homework#2\yuv_psnr_cal\yuv_psnr_cal\yuv_psnr_cal.cpp(131): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\alimc\desktop\mis homework#2\yuv_psnr_cal\yuv_psnr_cal\yuv_psnr_cal.cpp(139): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+  YUV_PSNR_cal.vcxproj -> C:\Users\alimc\Desktop\MIS Homework#2\YUV_PSNR_cal\Debug\YUV_PSNR_cal.exe
+  YUV_PSNR_cal.vcxproj -> C:\Users\alimc\Desktop\MIS Homework#2\YUV_PSNR_cal\Debug\YUV_PSNR_cal.pdb (Full PDB)
