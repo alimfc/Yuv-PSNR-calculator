@@ -1,0 +1,138 @@
+//   _____________________________________________________________________________________________________________________________________________________
+//  |  _________________________________________________________________________________________________________________________________________________  |
+//  | | Multimedia Information Systems                                                                                                                  | |
+//  | | Homework#2 - Yuv files                                                                                                                          | |
+//  | | Alim Furkan CANBULAT - 05140000555                                                                                                              | |
+//  | | YUV_PSNR_cal: Programa komut satýrýndan girilen iki tane .yuv uzantýlý resim veya video dosyalrýný Y->U->V sýrasýnda kodlanmýþ þekilde çözerek  | |
+//  | | iki dosyanýn her pixelindeki Y, U ve V deðerlerini kendi aralarýnda karþýlaþtýrýp Mean Square Error hesaplayarak PSNR deðerlerini ayrý ayrý he- | |
+//  | | saplar.																		| |
+//  | | komut satýrýnda program þu þekilde çalýþtýrýlýr;												| |
+//  | | .\YUV_PSNR_cal.exe original.yuv distorted.yuv witdh height format(i.e. 4:2:0)									| |
+//  | |_________________________________________________________________________________________________________________________________________________| |
+//  |_____________________________________________________________________________________________________________________________________________________|
+//
+#include "stdafx.h"
+#include <iostream>
+#include <stdio.h>
+#include <string>
+#include <ctime>
+#include <math.h>
+#include <iomanip>
+
+using namespace std;
+
+class Yuv_Decoder
+{
+public:
+	FILE* file;
+	uint8_t *buffer;
+	double frame_number;
+	double total_coeff;
+	unsigned int one_frame_size;
+	int witdh;
+	int height;
+	long int size;
+	string filename;
+	string chroma_subsample;
+	double coeff_y, coeff_u, coeff_v;
+public:
+	Yuv_Decoder(string file_name, int witdh_, int height_, string chroma_subsample_);
+	int Detect_Frame_number();
+	long int Detect_Size();
+};
+
+Yuv_Decoder::Yuv_Decoder(string file_name, int witdh_, int height_, string chroma_subsample_) {
+	filename = file_name;
+	witdh = witdh_;
+	height = height_;
+	chroma_subsample = chroma_subsample_;
+	Detect_Frame_number();
+}
+
+long int Yuv_Decoder::Detect_Size() {
+	const char* X = (char*)filename.c_str();
+	fopen_s(&file, X, "rb");
+	fseek(file, 0, SEEK_END);
+	size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	buffer = (uint8_t *)malloc(size + 1);
+	fread(buffer, size, 1, file);
+	fclose(file);
+	return size;
+}
+
+int Yuv_Decoder::Detect_Frame_number() {
+	long int size_file = Detect_Size();
+	//cout << "File size(byte)=" << size << endl;
+	coeff_y = ((double)chroma_subsample[0] - 48) / 4;
+	if (((double)chroma_subsample[2] - 48) == 2 && ((double)chroma_subsample[4] - 48) == 0)
+	{
+		coeff_u = ((double)chroma_subsample[2] - 48) / 8;
+		coeff_v = ((double)chroma_subsample[2] - 48) / 8;
+	}
+	else if (((double)chroma_subsample[2] - 48) == 2 && ((double)chroma_subsample[4] - 48) == 2) {
+		coeff_u = ((double)chroma_subsample[2] - 48) / 4;
+		coeff_v = ((double)chroma_subsample[4] - 48) / 4;
+	}
+	else {
+		coeff_u = ((double)chroma_subsample[2] - 48) / 4;
+		coeff_v = ((double)chroma_subsample[4] - 48) / 4;
+	}
+	total_coeff = (double)(coeff_y + coeff_u + coeff_v);
+	frame_number = size_file / (witdh*height*((double)total_coeff));
+	one_frame_size = (int)(size_file / frame_number);
+	return (int)frame_number;
+}
+
+int psnr(Yuv_Decoder* x, Yuv_Decoder* y, int frame_number) {
+	if ((frame_number > x->frame_number || frame_number > y->frame_number) && (x->frame_number > y->frame_number || x->frame_number < y->frame_number) || (x->one_frame_size != y->one_frame_size)) {
+		cout << "Frame number that insert is out of range! or Frame sizes are not equal!" << endl;
+		return -1;
+	}
+	int diff = 0;
+	double MSE = 0;
+	double PSNR = 0;
+	for (int i = 0; i < frame_number; i++)
+	{
+		int c = x->one_frame_size*i;
+		for (int j = c; j < x->one_frame_size*x->coeff_y / x->total_coeff + c; j++) {
+			diff = (int)x->buffer[j] - (int)y->buffer[j];
+			MSE += pow(diff, 2);
+		}
+		MSE = MSE / (double)(x->one_frame_size*x->coeff_y / x->total_coeff);
+		PSNR = 10 * log10(255 * 255 / MSE);
+		cout << "PSNR-Y of " << i + 1 << ".frame = " << setprecision(4) << PSNR << "dB" << endl;
+		for (int j = x->one_frame_size*x->coeff_y / x->total_coeff + c; j < (x->one_frame_size*x->coeff_y / x->total_coeff) + (x->one_frame_size*x->coeff_u / x->total_coeff) + c; j++) {
+			diff = (int)x->buffer[j] - (int)y->buffer[j];
+			MSE += pow(diff, 2);
+		}
+		MSE = MSE / (double)(x->one_frame_size*x->coeff_u / x->total_coeff);
+		PSNR = 10 * log10(255 * 255 / MSE);
+		cout << "PSNR-U of " << i + 1 << ".frame = " << setprecision(4) << PSNR << "dB" << endl;
+		for (int j = x->one_frame_size*x->coeff_y / x->total_coeff + x->one_frame_size*x->coeff_u / x->total_coeff + c; j < (x->one_frame_size*x->coeff_y / x->total_coeff) + (x->one_frame_size*x->coeff_u / x->total_coeff) + (x->one_frame_size*x->coeff_v / x->total_coeff) + c; j++) {
+			diff = (int)x->buffer[j] - (int)y->buffer[j];
+			MSE += pow(diff, 2);
+		}
+		MSE = MSE / (double)(x->one_frame_size*x->coeff_v / x->total_coeff);
+		PSNR = 10 * log10(255 * 255 / MSE);
+		cout << "PSNR-V of " << i + 1 << ".frame = " << setprecision(4) << PSNR << "dB" << endl << endl;
+	}
+	return 1;
+}
+
+int main(int argc, char** argv)
+{
+	if (argc != 6) {
+	cout << "Yetersiz veri girdiniz!" << endl;
+	return -1;
+	}
+	time_t current_time;
+	time_t previous_time;
+	time(&previous_time);
+	Yuv_Decoder  ori_yuv_file(argv[1], stoi(argv[3]), stoi(argv[4]), argv[5]);
+	Yuv_Decoder  dis_yuv_file(argv[2], stoi(argv[3]), stoi(argv[4]), argv[5]);
+	psnr(&ori_yuv_file, &dis_yuv_file, 112);
+	time(&current_time);
+	cout << "Calisma zamani "<<current_time - previous_time << "saniye surdu!"<<endl << endl;
+	return 0;
+}
